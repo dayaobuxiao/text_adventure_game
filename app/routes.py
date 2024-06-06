@@ -86,6 +86,7 @@ def default_encode(obj):
 def index():
     # Load game state from session
     game_state = session.get('game_state')
+    result = []
 
     if request.method == 'POST':
         user_input = request.form['user_input']
@@ -164,7 +165,7 @@ def index():
 
     # 确保game_state不是None，然后渲染模板
     if game_state is not None:
-        return render_template('index.html', game_state=game_state)
+        return render_template('index.html', game_state=game_state, result=result)
     else:
         # 如果game_state为None，显示错误消息
         return "An error occurred. Please try again later.", 500

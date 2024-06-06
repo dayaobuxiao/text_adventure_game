@@ -8,8 +8,8 @@
 
         body {
             font-family: 'MedievalSharp', cursive;
-            background-color: #333; /* 更改为深色背景 */
-            color: #f5f5f5; /* 更改为浅色文本以提高对比度 */
+            background-color: #333;
+            color: #f5f5f5;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
@@ -21,7 +21,7 @@
         }
 
         .game-output {
-            background-color: #444; /* 更改为深色背景 */
+            background-color: #444;
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -37,17 +37,17 @@
         input[type="text"] {
             padding: 10px;
             border-radius: 5px;
-            border: 1px solid #555; /* 更改为深色边框 */
+            border: 1px solid #555;
             font-family: inherit;
             width: 70%;
-            background-color: #555; /* 更改为深色背景 */
-            color: #f5f5f5; /* 更改为浅色文本 */
+            background-color: #555;
+            color: #f5f5f5;
         }
 
         button {
             padding: 10px 20px;
-            background-color: #555; /* 更改为深色背景 */
-            color: #f5f5f5; /* 更改为浅色文本 */
+            background-color: #555;
+            color: #f5f5f5;
             border: none;
             border-radius: 5px;
             font-family: inherit;
@@ -56,13 +56,16 @@
         }
 
         button:hover {
-            background-color: #666; /* 更改为更暗的背景 */
+            background-color: #666;
         }
     </style>
 </head>
 <body>
     <h1>Text Adventure Game</h1>
-    <div class="game-output" id="game-output">
+    <div class="game-output">
+        {% if result %}
+            <p><strong>Game:</strong> {{ result }}</p>
+        {% endif %}
         {% if game_state.story_tree.current_node.description %}
             {{ game_state.story_tree.current_node.description }}
             <br>
@@ -74,6 +77,9 @@
             <p>{{ game_state.level.description }}</p>
             <p><strong>Current Area:</strong> {{ game_state.level.current_area.name }}</p>
             <p>{{ game_state.level.current_area.description }}</p>
+            {% if game_state.level.current_node.description %}
+                <p><strong>Story Node Description:</strong> {{ game_state.level.current_node.description }}</p>
+            {% endif %}
             {% if game_state.level.current_area.items %}
                 <p><strong>Items:</strong>
                     {% for item in game_state.level.current_area.items %}
@@ -98,59 +104,37 @@
         {% endif %}
     </div>
 
-    <form id="user-input-form">
-        <input type="text" id="user-input" placeholder="Enter your command...">
+    <form method="post">
+        <input type="text" name="user_input" placeholder="Enter your command...">
         <button type="submit">Send</button>
     </form>
 
     <script>
         // 处理游戏输出
-        const gameOutput = document.getElementById('game-output');
-        const userInputForm = document.getElementById('user-input-form');
-        const userInput = document.getElementById('user-input');
+        const gameOutput = document.querySelector('.game-output');
+        const form = document.querySelector('form');
 
-        // 显示游戏状态信息
-        function displayGameState(state) {
-            gameOutput.innerHTML = `
-                <p><strong>Player:</strong> ${state.player.name}</p>
-                <p><strong>Health:</strong> ${state.player.health}</p>
-                <p><strong>Level:</strong> ${state.level.name}</p>
-                <p><strong>Description:</strong> ${state.level.description}</p>
-                <p><strong>Current Area:</strong> ${state.currentArea.name}</p>
-                <p><strong>Area Description:</strong> ${state.currentArea.description}</p>
-                <p><strong>Story Node:</strong> ${state.storyNode.description}</p>
-                <p><strong>Options:</strong></p>
-                <ul>
-                    ${Object.entries(state.storyNode.options).map(([key, value]) => `<li><strong>${key}:</strong> ${value}</li>`).join('')}
-                </ul>
-            `;
-        }
-
-        userInputForm.addEventListener('submit', function(event) {
+        form.addEventListener('submit', function(event) {
             event.preventDefault();
-            const userInputText = userInput.value;
-            gameOutput.innerHTML += `<p><strong>You:</strong> ${userInputText}</p>`;
+            const userInput = document.querySelector('input[name="user_input"]').value;
+            gameOutput.innerHTML += `<p><strong>You:</strong> ${userInput}</p>`;
 
-            // 发送用户输入到后端服务
-            fetch('/process_user_input', {
+            fetch('/', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/x-www-form-urlencoded'
                 },
-                body: JSON.stringify({ user_input: userInputText })
+                body: `user_input=${encodeURIComponent(userInput)}`
             })
-            .then(response => response.json())
-            .then(data => {
-                // 显示游戏响应
-                gameOutput.innerHTML += `<p><strong>Game:</strong> ${data.response}</p>`;
-                // 更新游戏状态并显示
-                displayGameState(data.gameState);
+            .then(response => response.text())
+            .then(result => {
+                gameOutput.innerHTML += `<p><strong>Game:</strong> ${result}</p>`;
             })
             .catch(error => {
                 console.error('Error:', error);
             });
 
-            userInput.value = '';
+            document.querySelector('input[name="user_input"]').value = '';
         });
     </script>
 </body>
