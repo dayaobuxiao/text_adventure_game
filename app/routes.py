@@ -8,7 +8,7 @@ from app.game import Player, Enemy, Level, MapArea, Battle, Quest, QuestManager,
 
 # ChatGLM API 的 URL 和密钥
 API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
-API_KEY = "fa8169ddcea10641598540bf387bfc78.8L9Nr96gFTaR84ZQ"
+API_KEY = "your_api_key"
 
 # 游戏上下文信息
 GAME_CONTEXT = """
