@@ -1,7 +1,7 @@
 import json
 import requests
 import pickle
-from flask import render_template, request, session
+from flask import request, session, jsonify, render_template
 
 from app import app
 from app.game import Player, Enemy, Level, MapArea, Battle, Quest, QuestManager, StoryNode, StoryTree, Item
@@ -86,7 +86,51 @@ def default_encode(obj):
 def index():
     # Load game state from session
     game_state = session.get('game_state')
-    result = []
+
+    # 创建游戏实例
+    # If the game state is not set, create a new game instance
+    if game_state is None:
+        player = Player()
+        quest_manager = QuestManager()
+
+        forest_area = MapArea("Forest", "You find yourself in a dense forest.")
+        cave_area = MapArea("Cave", "You enter a dark and damp cave.")
+        forest_area.add_connection("north", cave_area)
+        cave_area.add_connection("south", forest_area)
+
+        goblin = Enemy("Goblin", 20, 5, 2, 10)
+        forest_area.add_enemy(goblin)
+
+        healing_potion = Item("Healing Potion", "A potion that restores HP", "consumable")
+        forest_area.add_item(healing_potion)
+
+        quest1 = Quest(1, "Slay the goblin king", "Exp: 100")
+        quest2 = Quest(2, "Collect 10 bear pelts", "Item: Fur Cloak")
+        quest3 = Quest(3, "Explore the cave", "Exp: 50")
+        quest_manager.add_quest(quest1)
+        quest_manager.add_quest(quest2)
+        cave_area.add_quest(quest3)
+
+        level1 = Level("The Haunted Woods", "An ancient forest shrouded in mystery.", forest_area)
+
+        start_node = StoryNode("You wake up in a forest, unsure of how you got here...", {
+            "1": StoryNode("1. You decide to explore the forest.", {}),
+            "2": StoryNode("2. You head north towards a cave.", {})
+        })
+
+        story_tree = StoryTree(start_node)
+        story_tree.add_node(start_node.options["1"], "1")
+        story_tree.add_node(start_node.options["2"], "2")
+
+        game_state = {
+            'player': player,
+            'level': level1,
+            'story_tree': story_tree,
+            'quest_manager': quest_manager,
+        }
+
+        # Save the new game state to the session
+        session['game_state'] = json.dumps(game_state, default=default_encode)
 
     if request.method == 'POST':
         user_input = request.form['user_input']
@@ -116,58 +160,24 @@ def index():
         print(f"Bot: {result}")
         game_state = update_game_state(game_state, result)
         # Save the updated game state to the session
-        session['game_state'] = game_state
-
-    # 创建游戏实例
-    # If the game state is not set, create a new game instance
-    if game_state is None:
-        player = Player()
-        quest_manager = QuestManager()
-
-        forest_area = MapArea("Forest", "You find yourself in a dense forest.")
-        cave_area = MapArea("Cave", "You enter a dark and damp cave.")
-        forest_area.add_connection("north", cave_area)
-        cave_area.add_connection("south", forest_area)
-
-        goblin = Enemy("Goblin", 20, 5, 2, 10)
-        forest_area.add_enemy(goblin)
-
-        healing_potion = Item("Healing Potion", "A potion that restores HP", "consumable")
-        forest_area.add_item(healing_potion)
-
-        quest1 = Quest(1, "Slay the goblin king", "Exp: 100")
-        quest2 = Quest(2, "Collect 10 bear pelts", "Item: Fur Cloak")
-        quest3 = Quest(3, "Explore the cave", "Exp: 50")
-        quest_manager.add_quest(quest1)
-        quest_manager.add_quest(quest2)
-        cave_area.add_quest(quest3)
-
-        level1 = Level("The Haunted Woods", "An ancient forest shrouded in mystery.", forest_area)
-
-        start_node = StoryNode("You wake up in a forest, unsure of how you got here...", {
-            "1": StoryNode("You decide to explore the forest.", {}),
-            "2": StoryNode("You head north towards a cave.", {})
-        })
-
-        story_tree = StoryTree(start_node)
-        story_tree.add_node(start_node.options["1"], "1")
-        story_tree.add_node(start_node.options["2"], "2")
-
-        game_state = {
-            'player': player,
-            'level': level1,
-            'story_tree': story_tree,
-            'quest_manager': quest_manager,
-        }
-
-        # Save the new game state to the session
         session['game_state'] = json.dumps(game_state, default=default_encode)
-
-    # 确保game_state不是None，然后渲染模板
-    if game_state is not None:
-        return render_template('index.html', game_state=game_state, result=result)
+        # Send data to front-end
+        game_state_json = {
+            'player': json.dumps(game_state['player'].to_json(), default=default_encode),
+            'level': json.dumps(game_state['level'].to_json(), default=default_encode),
+            'story_tree': json.dumps(game_state['story_tree'].to_json(), default=default_encode),
+            'quest_manager': json.dumps(game_state['quest_manager'].to_json(), default=default_encode),
+        }
+        data = {
+            'game_state': game_state_json,
+            'result': result
+        }
+        return jsonify(data)
+    elif request.method == 'GET':
+        # 确保game_state不是None，然后渲染模板
+        return render_template('index.html', game_state=game_state)
     else:
-        # 如果game_state为None，显示错误消息
+        # 其他请求就报错
         return "An error occurred. Please try again later.", 500
 
 @app.before_request

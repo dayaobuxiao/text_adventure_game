@@ -8,8 +8,8 @@
 
         body {
             font-family: 'MedievalSharp', cursive;
-            background-color: #333;
-            color: #f5f5f5;
+            background-color: #2c2c2c;
+            color: #e6e6e6;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
@@ -20,14 +20,23 @@
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
         }
 
-        .game-output {
-            background-color: #444;
+        .game-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .context, .game-output, .player-info {
+            background-color: #1a1a1a;
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
             text-align: left;
-            min-height: 300px;
-            white-space: pre-wrap;
+        }
+
+        .info-container {
+            display: flex;
+            flex-direction: column;
         }
 
         form {
@@ -37,17 +46,15 @@
         input[type="text"] {
             padding: 10px;
             border-radius: 5px;
-            border: 1px solid #555;
+            border: 1px solid #ccc;
             font-family: inherit;
             width: 70%;
-            background-color: #555;
-            color: #f5f5f5;
         }
 
         button {
             padding: 10px 20px;
-            background-color: #555;
-            color: #f5f5f5;
+            background-color: #1a1a1a;
+            color: #e6e6e6;
             border: none;
             border-radius: 5px;
             font-family: inherit;
@@ -56,52 +63,28 @@
         }
 
         button:hover {
-            background-color: #666;
+            background-color: #555;
         }
     </style>
 </head>
 <body>
     <h1>Text Adventure Game</h1>
+    <div class="game-container">
+        <div class="context">
+            {% if game_state.story_tree.current_node.description %}
+                {{ game_state.story_tree.current_node.description }}
+                <br>
+                {% for option in game_state.story_tree.current_node.options %}
+                    {{ game_state.story_tree.current_node.options[option].description }}<br>
+                {% endfor %}
+            {% endif %}
+        </div>
+        <div class="info-container">
+            <div class="player-info">
+            </div>
+        </div>
+    </div>
     <div class="game-output">
-        {% if result %}
-            <p><strong>Game:</strong> {{ result }}</p>
-        {% endif %}
-        {% if game_state.story_tree.current_node.description %}
-            {{ game_state.story_tree.current_node.description }}
-            <br>
-            {% for option in game_state.story_tree.current_node.options %}
-                {{ game_state.story_tree.current_node.options[option].description }}<br>
-            {% endfor %}
-        {% else %}
-            <p><strong>{{ game_state.level.name }}</strong></p>
-            <p>{{ game_state.level.description }}</p>
-            <p><strong>Current Area:</strong> {{ game_state.level.current_area.name }}</p>
-            <p>{{ game_state.level.current_area.description }}</p>
-            {% if game_state.level.current_node.description %}
-                <p><strong>Story Node Description:</strong> {{ game_state.level.current_node.description }}</p>
-            {% endif %}
-            {% if game_state.level.current_area.items %}
-                <p><strong>Items:</strong>
-                    {% for item in game_state.level.current_area.items %}
-                        {{ item.name }}{% if not loop.last %}, {% endif %}
-                    {% endfor %}
-                </p>
-            {% endif %}
-            {% if game_state.level.current_area.enemies %}
-                <p><strong>Enemies:</strong>
-                    {% for enemy in game_state.level.current_area.enemies %}
-                        {{ enemy.name }}{% if not loop.last %}, {% endif %}
-                    {% endfor %}
-                </p>
-            {% endif %}
-            {% if game_state.level.current_area.connections %}
-                <p><strong>Connections:</strong>
-                    {% for direction, area in game_state.level.current_area.connections.items() %}
-                        {{ direction }} ({{ area.name }}){% if not loop.last %}, {% endif %}
-                    {% endfor %}
-                </p>
-            {% endif %}
-        {% endif %}
     </div>
 
     <form method="post">
@@ -112,6 +95,7 @@
     <script>
         // 处理游戏输出
         const gameOutput = document.querySelector('.game-output');
+        const playerInfo = document.querySelector('.player-info');
         const form = document.querySelector('form');
 
         form.addEventListener('submit', function(event) {
@@ -126,9 +110,21 @@
                 },
                 body: `user_input=${encodeURIComponent(userInput)}`
             })
-            .then(response => response.text())
-            .then(result => {
+            .then(response => response.json())
+            .then(data => {
+                // 处理服务器返回的游戏状态信息
+                const gameState = data['game_state'];
+                const result = data['result'];
+                const player = JSON.parse(gameState['player'])
+                // 更新 HTML 元素以显示这些数据
                 gameOutput.innerHTML += `<p><strong>Game:</strong> ${result}</p>`;
+                playerInfo.innerHTML = `<p><strong>Player</strong></p>
+                    HP:&nbsp;&nbsp;${player.hp}<br>
+                    LEVEL:&nbsp;&nbsp;${player.level}<br>
+                    INTELLIGENCE:&nbsp;&nbsp;${player.intelligence}<br>
+                    ENDURANCE:&nbsp;&nbsp;${player.endurance}<br>
+                    EXP:&nbsp;&nbsp;${player.exp}<br>
+                    ITEMS:&nbsp;&nbsp;${player.items.map(item => `<span>${item}</span>`).join(', ')}<br>`;
             })
             .catch(error => {
                 console.error('Error:', error);
