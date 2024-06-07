@@ -24,6 +24,7 @@
             display: flex;
             justify-content: space-between;
             margin-bottom: 20px;
+            align-items: stretch; /* 确保子元素在交叉轴上拉伸以填充容器 */
         }
 
         .context, .game-output, .player-info {
@@ -34,9 +35,13 @@
             text-align: left;
         }
 
-        .info-container {
+        .context, .player-info {
+            flex: 1; /* 让这些元素平分空间 */
             display: flex;
-            flex-direction: column;
+            flex-direction: column; /* 如果需要垂直排列子元素 */
+            align-items: stretch; /* 确保内部元素也拉伸以填充高度 */
+            min-height: 100px; /* 根据需要调整 */
+            margin: 5px; /* 根据需要调整 */
         }
 
         form {
